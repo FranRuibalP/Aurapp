@@ -5,6 +5,7 @@ import UserRanking from './components/UserRanking';
 import MotivationalPhrase from './components/MotivationalPhrase';
 import { useEffect, useState } from 'react';
 import { FaArrowDown } from 'react-icons/fa';
+import Link from 'next/link';
 
 
 const users = [
@@ -17,7 +18,7 @@ const users = [
 
 export default function Home() {
   const [showButton, setShowButton] = useState(true);
-  const [auraLevel, setAuraLevel] = useState(100);
+  const [auraLevel, setAuraLevel] = useState(1000);
   
 
   useEffect(() => {
@@ -40,10 +41,10 @@ export default function Home() {
     const auraColor = getAuraColor(auraLevel);
   return (
     <>
-      <Navbar />
-      <main className="pt-16 px-4">
+      <Navbar aura={auraLevel}/>
+      <main id="inicio" className="pt-16 px-4">
         <section className="text-center mt-10 h-screen">
-          <h1 className="text-4xl font-bold">Bienvenido Nacho</h1>
+          <h1 className="text-4xl font-bold">Bienvenido Francisco</h1>
           <p className="mt-4 text-gray-600">
             Tu nivel de Aura esta muy bien! Sigue Asi!
           </p>

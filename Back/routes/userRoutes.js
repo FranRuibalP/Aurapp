@@ -9,8 +9,8 @@ const {
 } = require("../controllers/userController");
 
 router.get("/", getAllUsers);
-//router.get("/:id", getUserById);
-router.get("/:username", getUserByName);
+router.get("/:id", getUserById);
+//router.get("/:username", getUserByName);
 router.post("/", createUser);
 router.post("/:id/aura", updateUserAura);
 

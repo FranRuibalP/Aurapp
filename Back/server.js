@@ -4,6 +4,8 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const postRoutes = require("./routes/postRoutes");
 const userRoutes = require("./routes/userRoutes");
+const authRoutes = require("./routes/authRoutes");
+const cloudinaryRoutes = require("./routes/cloudinaryRoutes");
 
 dotenv.config();
 
@@ -15,6 +17,8 @@ app.use(cors());
 app.use(express.json());
 
 // Rutas
+app.use("/api/cloudinary", cloudinaryRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/users", userRoutes);
 

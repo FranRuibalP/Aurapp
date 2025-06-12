@@ -11,6 +11,8 @@ const postSchema = new mongoose.Schema(
       ref: "User",
       required: true
     },
+    image: String,
+    imagePublicId: String,
     description: String,
     aura: Number,
     publisher: String,

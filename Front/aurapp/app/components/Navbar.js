@@ -14,8 +14,8 @@ export default function Navbar(aura) {
       <h1 className="text-white font-bold text-xl">Aurapp</h1>
       <MenuButton isOpen={isOpen} toggle={toggleMenu} />
       <MobileMenu isOpen={isOpen}>
-        <a href="/#inicio" onClick={toggleMenu} className="text-white text-lg my-2">Inicio</a>
-        <a href="/#ranking" onClick={toggleMenu} className="text-white text-lg my-2">Ranking</a>
+        <a href="/home/#inicio" onClick={toggleMenu} className="text-white text-lg my-2">Inicio</a>
+        <a href="/home/#ranking" onClick={toggleMenu} className="text-white text-lg my-2">Ranking</a>
         <Link href={{ pathname: "/posts", query: { aura } }} passHref={true} onClick={toggleMenu} className="text-white text-lg my-2">Posts</Link>
         <Link href={{ pathname: "/profile", query: { aura } }} passHref={true} onClick={toggleMenu} className="text-white text-lg my-2">Perfil</Link>
       </MobileMenu>

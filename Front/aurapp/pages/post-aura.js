@@ -4,7 +4,8 @@ import Navbar from "../app/components/Navbar"; // Ruta según tu estructura
 import RootLayout from "../app/layout";
 import { useSpring, animated } from '@react-spring/web';
 import { useRouter } from "next/navigation";
-
+import dotenv from "dotenv";
+import axios from "axios";
 
 export default function PostAura({}) {
   
@@ -13,15 +14,69 @@ export default function PostAura({}) {
   const [description, setDescription] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const color = getAuraColor(auraLevel);
-  const [selectedUser, setSelectedUser] = useState("");
-  const friends = ["Francisco", "Nacho", "Matias", "Jaco", "Camilo"];
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [author, setAuthor] = useState("");
+  const [users, setUsers] = useState([]);
+  const [dedicatedTo, setDedicatedTo] = useState("");
   
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setAuthor(parsedUser._id);
+      } catch (e) {
+        console.error("Error parsing user from localStorage:", e);
+      }
+    }
+    axios
+      .get(`${process.env.NEXT_PUBLIC_URL_BACKEND}users`) 
+      .then((res) => {
+        const cleanUsers = res.data
+        .map(user => ({
+          id: user._id,
+          name: user.username,
+        }))
+        console.log(cleanUsers);
+        setUsers(cleanUsers);
+      })
+      .catch((error) => {
+        console.error("Error al obtener usuarios:", error);
+      });
+  }, []);
+  
+  console.log(author);
+  console.log(dedicatedTo);
+  const uploadImageToCloudinary = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "postsImages"); 
+
+    try {
+      const res = await axios.post(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      const { secure_url, public_id } = res.data;
+      return [secure_url, public_id]; // URL pública de la imagen
+    } catch (error) {
+      console.error("Error al subir imagen:", error);
+      return null;
+    }
+  };
+
 
   const handleAuraChange = (amount) => {
     setAura((prev) => prev + amount);
   };
 
-  const canPost = aura !== 0 && description.trim() !== "" && selectedUser !== "";
+  const canPost = aura !== 0 && description.trim() !== "" && dedicatedTo !== "";
 
   const { number } = useSpring({
     number: aura,
@@ -33,12 +88,39 @@ export default function PostAura({}) {
 
   const router = useRouter();
   const [isPosting, setIsPosting] = useState(false);
-  const handlePost = () => {
-  setIsPosting(true);
-  setTimeout(() => {
-    router.push("/posts");
-  }, 5000); // 5 segundos
-};
+
+  const handlePost = async () => {
+    setIsPosting(true);
+
+    let imageUrl = null;
+    if (imageFile) {
+      imageUrl = await uploadImageToCloudinary(imageFile);
+    }
+    console.log(imageUrl);
+    const postData = {
+      author: author,
+      dedicatedTo: dedicatedTo,
+      description,
+      aura,
+      image: imageUrl[0],
+      imagePublicId: imageUrl[1],
+    };
+
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_URL_BACKEND}posts`, postData); 
+      router.replace("/posts");
+    } catch (error) {
+      
+      if (imageUrl[1] != ""){
+        await axios.post(`${process.env.NEXT_PUBLIC_URL_BACKEND}cloudinary/delete`, { public_id: imageUrl[1]} ); // endpoint para eliminar
+      }
+      console.error("Error al postear:", error);
+      setIsPosting(false);
+    }
+  };
+
+  
+
 
   return (
     
@@ -54,22 +136,9 @@ export default function PostAura({}) {
       </div>
 
 
-      <div className="flex justify-center gap-10 mb-6">
-        {/* Resta */}
-        <div className="flex flex-col gap-4">
-          {[50, 100, 500].map((val) => (
-            <button
-              key={`sub-${val}`}
-              onClick={() => handleAuraChange(-val)}
-              className={`border-2 ${color[7]} ${color[5]} ${color[6]} font-semibold px-5 py-2 rounded-full bg-transparent`}
-            >
-              -{val}
-            </button>
-          ))}
-        </div>
-
+      <div className="flex flex-col item-center justify-center gap-10 mb-6">
         {/* Suma */}
-        <div className="flex flex-col gap-4">
+        <div className="flex justify-center gap-4">
           {[50, 100, 500].map((val) => (
             <button
               key={`add-${val}`}
@@ -81,21 +150,64 @@ export default function PostAura({}) {
           ))}
         </div>
       </div>
+        {/* Resta */}
+        <div className="flex justify-center gap-4 mb-6">
+          {[50, 100, 500].map((val) => (
+            <button
+              key={`sub-${val}`}
+              onClick={() => handleAuraChange(-val)}
+              className={`border-2 ${color[7]} ${color[5]} ${color[6]} font-semibold px-5 py-2 rounded-full bg-transparent`}
+            >
+              -{val}
+            </button>
+          ))}
+        </div>
+
+
+            {imagePreview && (
+        <div className="flex justify-center mb-4">
+          <img src={imagePreview} alt="Preview" className="w-48 h-auto rounded shadow" />
+        </div>
+      )}
+
+      <div className="mb-6 text-center">
+        <label className="block mb-2 font-medium text-black dark:text-white">Subí una imagen</label>
+        <input
+          type="file"
+          accept="image/*"
+          id="file-upload"
+          onChange={(e) => {
+            const file = e.target.files[0];
+            if (file) {
+              setImageFile(file);
+              setImagePreview(URL.createObjectURL(file));
+            }
+          }}
+          className="hidden"
+        />
+        <label
+          htmlFor="file-upload"
+          className={`inline-block px-5 py-2 rounded-full cursor-pointer font-semibold ${color[0]} text-white hover:opacity-90 transition`}
+        >
+          Elegir imagen
+        </label>
+      </div>
+
             <div className="mb-6">
         <label className="block mb-2 font-medium text-black dark:text-white">
           Elegí destinatario del aura
         </label>
         <select
-          value={selectedUser}
-          onChange={(e) => setSelectedUser(e.target.value)}
+          value={dedicatedTo}
+          onChange={(e) => setDedicatedTo(e.target.value)}
           className="w-full p-3 rounded border dark:bg-gray-800 dark:text-white dark:border-gray-600 text-black"
         >
           <option value="" disabled>
             Seleccioná un usuario
           </option>
-          {friends.map((user, idx) => (
-            <option key={idx} value={user}>
-              {user}
+          {users.map((user, idx) => (
+            <option key={user.id} value={user.id}>
+              {user.name}
             </option>
           ))}
         </select>

@@ -17,7 +17,7 @@ exports.getAllPosts = async (req, res) => {
 // Crear un nuevo post con referencias válidas
 exports.createPost = async (req, res) => {
   try {
-    const { author, dedicatedTo, description, aura } = req.body;
+    const { author, dedicatedTo, description, aura ,image, imagePublicId} = req.body;
 
     // Validar que los usuarios existan
     const authorExists = await User.findById(author);
@@ -31,6 +31,8 @@ exports.createPost = async (req, res) => {
       dedicatedTo,
       description,
       aura,
+      image,
+      imagePublicId,
     });
 
     await newPost.save();

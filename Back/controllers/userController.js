@@ -2,16 +2,17 @@ const User = require("../models/User");
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().sort({ createdAt: -1 });
+    const users = await User.find({}, "_id username aura").sort({ createdAt: -1 });
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: "Error al obtener usuarios" });
   }
 };
 
+
 exports.getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.username);
+    const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "Usuario ID no encontrado" });
     res.json(user);
   } catch (err) {

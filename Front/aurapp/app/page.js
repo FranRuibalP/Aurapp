@@ -1,81 +1,176 @@
 "use client";
-import Navbar from './components/Navbar';
-import AuraCircleMotion from './components/AuraCircleMotion';
-import UserRanking from './components/UserRanking';
-import MotivationalPhrase from './components/MotivationalPhrase';
-import { useEffect, useState } from 'react';
-import { FaArrowDown } from 'react-icons/fa';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import Home from "../pages/home"
+import axios from "axios";
 
+export default function LandingPage() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [currentColor, setCurrentColor] = useState(0);
+  const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [registerData, setRegisterData] = useState({
+    username: "",
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState(false);
 
-const users = [
-  { name: 'Francisco', aura: 1500 },
-  { name: 'Nacho', aura: 1000 },
-  { name: 'Matias', aura: 950 },
-  { name: 'Jaco', aura: 500 },
-  { name: 'Camilo', aura: 150 },
-];
-
-export default function Home() {
-  const [showButton, setShowButton] = useState(true);
-  const [auraLevel, setAuraLevel] = useState(1000);
-  
+  const auraColors = ["from-red-500", "from-indigo-500", "from-cyan-400", "from-yellow-400"];
+  const router = useRouter();
 
   useEffect(() => {
-      const handleScroll = () => {
-        const ranking = document.getElementById('ranking');
-        if (!ranking) return;
+    const interval = setInterval(() => {
+      setCurrentColor((prev) => (prev + 1) % auraColors.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
-        const rankingTop = ranking.getBoundingClientRect().top;
-        // Si el top del ranking está dentro de los 300px visibles, ocultamos el botón
-        if (rankingTop < window.innerHeight - 300) {
-          setShowButton(false);
-        } else {
-          setShowButton(true);
-        }
-      };
+  const handleLogin = async () => {
+    try {
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_URL_BACKEND}auth/login`, loginData);
+      localStorage.setItem("token", res.data.token);
+      const resUser = await axios.get(`${process.env.NEXT_PUBLIC_URL_BACKEND}users/`+res.data.user.id);
+      console.log(resUser.data);
+      localStorage.setItem("user", JSON.stringify(resUser.data));
+      router.replace("/home");
+      //setIsLoggedIn(true);
+    } catch (err) {
+      setError("Credenciales incorrectas o error del servidor");
+    }
+  };
 
-      window.addEventListener('scroll', handleScroll);
-      return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-    const auraColor = getAuraColor(auraLevel);
-  return (
-    <>
-      <Navbar aura={auraLevel}/>
-      <main id="inicio" className="pt-16 px-4">
-        <section className="text-center mt-10 h-screen">
-          <h1 className="text-4xl font-bold">Bienvenido Francisco</h1>
-          <p className="mt-4 text-gray-600">
-            Tu nivel de Aura esta muy bien! Sigue Asi!
-          </p>
-          <AuraCircleMotion aura={auraLevel}/>
-          <MotivationalPhrase />
-        </section>
-        {showButton && (
-        <button
-          onClick={() =>
-            document.getElementById('ranking')?.scrollIntoView({ behavior: 'smooth' })
-          }
-          className={`fixed bottom-6 right-6 z-50 ${auraColor[0]} ${auraColor[1]} ${auraColor[2]} ${auraColor[3]} text-white rounded-full p-4 shadow-lg transition duration-300`}
-        >
-          <span className="flex items-center space-x-2 pr-2 font-bold">
-            <p> Ver Ranking </p>
-          <FaArrowDown className="w-5 h-5" />
-          </span>
-        </button>
-        )}
-        <div id="ranking" className="min-h-screen bg-transparent flex items-center justify-center p-4">
-          <UserRanking users={users} aura={auraLevel}/>
+  const handleRegister = async () => {
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_URL_BACKEND}auth/register`, registerData);
+      setRegisterSuccess(true);
+      setRegisterData({ username: "", email: "", password: "" });
+    } catch (err) {
+      setError("Error al registrar. Verificá los datos.");
+    }
+  };
+    return (
+      
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white relative overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <AnimatePresence>
+            <motion.div
+              key={currentColor}
+              className={`absolute w-96 h-96 rounded-full blur-3xl bg-gradient-to-br ${auraColors[currentColor]}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, scale: [2, 1.5, 2] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2 }}
+            />
+          </AnimatePresence>
         </div>
-        
-      </main>
-    </>
-  );
-  function getAuraColor(aura) {
-  if (aura < 500) return ['bg-red-500', 'dark:bg-red-500', 'hover:bg-red-600', 'dark:hover:bg-red-600'];
-  if (aura < 1500) return ['bg-indigo-600', 'dark:bg-indigo-600', 'hover:bg-indigo-700', 'dark:hover:bg-indigo-700'];
-  if (aura < 2000) return ['bg-cyan-400', 'dark:bg-cyan-400', 'hover:bg-cyan-500', 'dark:hover:bg-cyan-500'];
-  return ['bg-yellow-400', 'dark:bg-yellow-400', 'hover:bg-yellow-500', 'dark:hover:bg-yellow-500']; // dorado
-  }
 
+
+        <h1 className="z-10 text-4xl font-bold mb-8">Bienvenido a Aurapp</h1>
+
+        <button
+          onClick={() => {
+            setModalOpen(true);
+            setError("");
+            setRegisterSuccess(false);
+          }}
+          className="z-10 bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-200 transition"
+        >
+          Get Started
+        </button>
+
+        <AnimatePresence>
+          {modalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-transparent bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-20"
+            >
+              <motion.div
+                initial={{ y: -50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -50, opacity: 0 }}
+                className="bg-white text-black rounded-xl shadow-xl w-[90%] max-w-3xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6 relative"
+              >
+                {/* Botón de cierre */}
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="absolute top-2 right-4 text-black text-xl font-bold"
+                >
+                  ×
+                </button>
+
+                {/* Iniciar Sesión */}
+                <div>
+                  <h2 className="text-xl font-bold mb-4">Iniciar Sesión</h2>
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    className="w-full p-2 mb-3 border rounded"
+                    value={loginData.email}
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Contraseña"
+                    className="w-full p-2 mb-3 border rounded"
+                    value={loginData.password}
+                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                  />
+                  {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+                  <button
+                    className="bg-black text-white px-4 py-2 rounded w-full"
+                    onClick={handleLogin}
+                  >
+                    Entrar
+                  </button>
+                </div>
+
+                {/* Registrarse */}
+                <div>
+                  <h2 className="text-xl font-bold mb-4">Registrarse</h2>
+                  <input
+                    type="text"
+                    placeholder="Usuario"
+                    className="w-full p-2 mb-3 border rounded"
+                    value={registerData.username}
+                    onChange={(e) =>
+                      setRegisterData({ ...registerData, username: e.target.value })
+                    }
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    className="w-full p-2 mb-3 border rounded"
+                    value={registerData.email}
+                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Contraseña"
+                    className="w-full p-2 mb-3 border rounded"
+                    value={registerData.password}
+                    onChange={(e) =>
+                      setRegisterData({ ...registerData, password: e.target.value })
+                    }
+                  />
+                  <button
+                    className="bg-black text-white px-4 py-2 rounded w-full"
+                    onClick={handleRegister}
+                  >
+                    Registrarse
+                  </button>
+                  {registerSuccess && (
+                    <p className="text-green-600 text-sm mt-2">Usuario registrado con éxito ✅</p>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  
 }

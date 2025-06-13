@@ -4,46 +4,51 @@ import AuraCircleMotion from '../app/components/AuraCircleMotion';
 import UserRanking from '../app/components/UserRanking';
 import MotivationalPhrase from '../app/components/MotivationalPhrase';
 import { useEffect, useState } from 'react';
-import RootLayout from "../app/layout";
 import { FaArrowDown } from 'react-icons/fa';
 import axios from "axios";
-import dotenv from "dotenv";
+import RootLayout from '@/app/layout';
 
 export default function Home() {
   const [showButton, setShowButton] = useState(true);
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
-  console.log(process.env.URL_BACKEND);
+  const [loadingUser, setLoadingUser] = useState(true); // 👈
+
   useEffect(() => {
-    // Leer usuario del localStorage
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
+        const userId = parsedUser._id;
+
+        axios.get(`${process.env.NEXT_PUBLIC_URL_BACKEND}users/${userId}`)
+          .then((res) => setUser(res.data))
+          .catch((err) => console.error("Error al obtener usuario:", err))
+          .finally(() => setLoadingUser(false)); // 👈 ya terminó la carga
       } catch (e) {
         console.error("Error parsing user from localStorage:", e);
+        setLoadingUser(false);
       }
+    } else {
+      setLoadingUser(false);
     }
 
-    // Obtener usuarios para el ranking
     axios
-      .get(`${process.env.NEXT_PUBLIC_URL_BACKEND}users`) 
+      .get(`${process.env.NEXT_PUBLIC_URL_BACKEND}users`)
       .then((res) => {
         const cleanUsers = res.data
-      .map(user => ({
-        name: user.username,
-        aura: user.aura || 0,
-      }))
-      .sort((a, b) => b.aura - a.aura); // Ordenar de mayor a menor aura
-      console.log(cleanUsers);
-      setUsers(cleanUsers);
+          .map(user => ({
+            name: user.username,
+            aura: user.aura || 0,
+            profileImage: user.profileImage
+          }))
+          .sort((a, b) => b.aura - a.aura);
+        setUsers(cleanUsers);
       })
       .catch((err) => {
         console.error("Error fetching users:", err);
       });
 
-    // Manejar scroll
     const handleScroll = () => {
       const ranking = document.getElementById('ranking');
       if (!ranking) return;
@@ -55,20 +60,43 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  if (loadingUser) {
+    return (
+      <div className="flex h-screen justify-center items-center">
+        <p className="text-xl text-gray-500">Cargando...</p>
+      </div>
+    );
+  }
+
   const auraLevel = user?.aura || 0;
   const auraColor = getAuraColor(auraLevel);
+  const motivationalMessage = getMotivationalMessage(auraLevel);
+
+  const buttonClasses = `
+    cursor-pointer
+    fixed bottom-6 right-6 z-50
+    bg-${auraColor}-600 dark:bg-${auraColor}-600
+    hover:bg-${auraColor}-700 dark:hover:bg-${auraColor}-700
+    text-white rounded-full p-4 shadow-lg transition duration-300
+  `;
 
   return (
     <>
       <Navbar aura={auraLevel} />
-      <main id="inicio" className="pt-16 px-4">
-        <section className="text-center mt-10 h-screen">
+
+      <div className="hidden 
+        bg-rose-600 hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-700
+        bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700
+        bg-emerald-400 hover:bg-emerald-500 dark:bg-emerald-400 dark:hover:bg-emerald-500
+        bg-yellow-400 hover:bg-yellow-500 dark:bg-yellow-400 dark:hover:bg-yellow-500"
+      ></div>
+
+      <main id="inicio" className="pt-16 px-4 bg-neutral-900">
+        <section className="text-center mt-10 h-screen text-zinc-50">
           <h1 className="text-4xl font-bold">
             Bienvenido {user?.username || "Usuario"}
           </h1>
-          <p className="mt-4 text-gray-600">
-            Tu nivel de Aura está {auraLevel >= 1000 ? "muy bien" : "en progreso"}! ¡Sigue así!
-          </p>
+          <p className="mt-4 text-zinc-50">{motivationalMessage}</p>
           <AuraCircleMotion aura={auraLevel} />
           <MotivationalPhrase />
         </section>
@@ -78,10 +106,10 @@ export default function Home() {
             onClick={() =>
               document.getElementById('ranking')?.scrollIntoView({ behavior: 'smooth' })
             }
-            className={`fixed bottom-6 right-6 z-50 ${auraColor.join(" ")} text-white rounded-full p-4 shadow-lg transition duration-300`}
+            className={buttonClasses}
           >
             <span className="flex items-center space-x-2 pr-2 font-bold">
-              <p> Ver Ranking </p>
+              <p>Ver Ranking</p>
               <FaArrowDown className="w-5 h-5" />
             </span>
           </button>
@@ -95,9 +123,16 @@ export default function Home() {
   );
 
   function getAuraColor(aura) {
-    if (aura < 500) return ['bg-red-500', 'dark:bg-red-500', 'hover:bg-red-600', 'dark:hover:bg-red-600'];
-    if (aura < 1500) return ['bg-indigo-600', 'dark:bg-indigo-600', 'hover:bg-indigo-700', 'dark:hover:bg-indigo-700'];
-    if (aura < 2000) return ['bg-cyan-400', 'dark:bg-cyan-400', 'hover:bg-cyan-500', 'dark:hover:bg-cyan-500'];
-    return ['bg-yellow-400', 'dark:bg-yellow-400', 'hover:bg-yellow-500', 'dark:hover:bg-yellow-500'];
+    if (aura < 500) return "rose";
+    if (aura < 1500) return "indigo";
+    if (aura < 2000) return "emerald";
+    return "yellow";
+  }
+
+  function getMotivationalMessage(aura) {
+    if (aura < 500) return "Tus niveles de aura estan muy bajos. ¡Eleva frecuencia!";
+    if (aura < 1500) return "Estás en el camino correcto, no te detengas.";
+    if (aura < 2000) return "Tu aura brilla con fuerza, sigue así.";
+    return "Estás iluminando el camino de otros. ¡Increíble!";
   }
 }

@@ -1,25 +1,25 @@
 "use client";
 import { useState, useEffect } from "react";
-import Navbar from "../app/components/Navbar"; // Ruta según tu estructura
-import RootLayout from "../app/layout";
+import Navbar from "../app/components/Navbar";
 import { useSpring, animated } from '@react-spring/web';
 import { useRouter } from "next/navigation";
-import dotenv from "dotenv";
 import axios from "axios";
+import RootLayout from "@/app/layout";
 
-export default function PostAura({}) {
-  
-  const auraLevel = 1000
+export default function PostAura() {
+  const auraLevel = 1000;
   const [aura, setAura] = useState(0);
   const [description, setDescription] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
-  const color = getAuraColor(auraLevel);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [author, setAuthor] = useState("");
   const [users, setUsers] = useState([]);
   const [dedicatedTo, setDedicatedTo] = useState("");
-  
+  const [isPosting, setIsPosting] = useState(false);
+
+  const router = useRouter();
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -30,53 +30,46 @@ export default function PostAura({}) {
         console.error("Error parsing user from localStorage:", e);
       }
     }
-    axios
-      .get(`${process.env.NEXT_PUBLIC_URL_BACKEND}users`) 
+
+    axios.get(`${process.env.NEXT_PUBLIC_URL_BACKEND}users`)
       .then((res) => {
-        const cleanUsers = res.data
-        .map(user => ({
+        const cleanUsers = res.data.map(user => ({
           id: user._id,
           name: user.username,
-        }))
-        console.log(cleanUsers);
+        }));
         setUsers(cleanUsers);
       })
       .catch((error) => {
         console.error("Error al obtener usuarios:", error);
       });
   }, []);
-  
-  console.log(author);
-  console.log(dedicatedTo);
+
   const uploadImageToCloudinary = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("upload_preset", "postsImages"); 
+    formData.append("upload_preset", "postsImages");
 
     try {
       const res = await axios.post(
         `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
         }
       );
       const { secure_url, public_id } = res.data;
-      return [secure_url, public_id]; // URL pública de la imagen
+      return [secure_url, public_id];
     } catch (error) {
       console.error("Error al subir imagen:", error);
-      return null;
+      return [null, null];
     }
   };
-
 
   const handleAuraChange = (amount) => {
     setAura((prev) => prev + amount);
   };
 
-  const canPost = aura !== 0 && description.trim() !== "" && dedicatedTo !== "";
+  const canPost = aura !== 0 && description.trim() !== "" && dedicatedTo !== "" && imageFile !== null;
 
   const { number } = useSpring({
     number: aura,
@@ -84,48 +77,46 @@ export default function PostAura({}) {
     config: { tension: 170, friction: 26 },
   });
 
-  
-
-  const router = useRouter();
-  const [isPosting, setIsPosting] = useState(false);
-
   const handlePost = async () => {
     setIsPosting(true);
 
-    let imageUrl = null;
+    let imageUrl = [null, null];
     if (imageFile) {
       imageUrl = await uploadImageToCloudinary(imageFile);
     }
-    console.log(imageUrl);
+
     const postData = {
-      author: author,
-      dedicatedTo: dedicatedTo,
+      author,
+      dedicatedTo,
       description,
       aura,
       image: imageUrl[0],
       imagePublicId: imageUrl[1],
+      auraImpactApplied: isPrivate,
     };
 
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_URL_BACKEND}posts`, postData); 
+      await axios.post(`${process.env.NEXT_PUBLIC_URL_BACKEND}posts`, postData);
+
+      if (isPrivate) {
+        await axios.post(`${process.env.NEXT_PUBLIC_URL_BACKEND}users/${dedicatedTo}/aura`, {
+          aura: aura
+        });
+      }
+
       router.replace("/posts");
     } catch (error) {
-      
-      if (imageUrl[1] != ""){
-        await axios.post(`${process.env.NEXT_PUBLIC_URL_BACKEND}cloudinary/delete`, { public_id: imageUrl[1]} ); // endpoint para eliminar
+      if (imageUrl[1]) {
+        await axios.post(`${process.env.NEXT_PUBLIC_URL_BACKEND}cloudinary/delete`, {
+          public_id: imageUrl[1]
+        });
       }
       console.error("Error al postear:", error);
       setIsPosting(false);
     }
   };
-
-  
-
-
   return (
-    
-      
-    <div className={`min-h-screen p-6 bg-transparent bg-opacity-10`}>
+    <div className="min-h-screen p-6 bg-neutral-50 dark:bg-neutral-900">
       <Navbar />
       <h1 className="text-center text-2xl font-bold mt-10 mb-6 dark:text-white text-black">
         Ajuste de Aura
@@ -135,36 +126,36 @@ export default function PostAura({}) {
         <animated.span>{number.to((n) => Math.floor(n))}</animated.span>
       </div>
 
-
+      {/* Botones de suma */}
       <div className="flex flex-col item-center justify-center gap-10 mb-6">
-        {/* Suma */}
         <div className="flex justify-center gap-4">
           {[50, 100, 500].map((val) => (
             <button
               key={`add-${val}`}
               onClick={() => handleAuraChange(val)}
-              className={`${color[0]} text-white font-semibold px-5 py-2 rounded-full`}
+              className="cursor-pointer bg-indigo-600 text-white font-semibold px-5 py-2 rounded-full hover:bg-indigo-700"
             >
               +{val}
             </button>
           ))}
         </div>
       </div>
-        {/* Resta */}
-        <div className="flex justify-center gap-4 mb-6">
-          {[50, 100, 500].map((val) => (
-            <button
-              key={`sub-${val}`}
-              onClick={() => handleAuraChange(-val)}
-              className={`border-2 ${color[7]} ${color[5]} ${color[6]} font-semibold px-5 py-2 rounded-full bg-transparent`}
-            >
-              -{val}
-            </button>
-          ))}
-        </div>
 
+      {/* Botones de resta */}
+      <div className="flex justify-center gap-4 mb-6">
+        {[50, 100, 500].map((val) => (
+          <button
+            key={`sub-${val}`}
+            onClick={() => handleAuraChange(-val)}
+            className="cursor-pointer border-2 border-indigo-600 text-indigo-600 font-semibold px-5 py-2 rounded-full bg-transparent hover:bg-indigo-900 hover:text-white"
+          >
+            -{val}
+          </button>
+        ))}
+      </div>
 
-            {imagePreview && (
+      {/* Imagen */}
+      {imagePreview && (
         <div className="flex justify-center mb-4">
           <img src={imagePreview} alt="Preview" className="w-48 h-auto rounded shadow" />
         </div>
@@ -187,13 +178,14 @@ export default function PostAura({}) {
         />
         <label
           htmlFor="file-upload"
-          className={`inline-block px-5 py-2 rounded-full cursor-pointer font-semibold ${color[0]} text-white hover:opacity-90 transition`}
+          className="inline-block px-5 py-2 rounded-full cursor-pointer font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition"
         >
           Elegir imagen
         </label>
       </div>
 
-            <div className="mb-6">
+      {/* Select de destinatario */}
+      <div className="mb-6 max-w-xl mx-auto w-full">
         <label className="block mb-2 font-medium text-black dark:text-white">
           Elegí destinatario del aura
         </label>
@@ -205,7 +197,7 @@ export default function PostAura({}) {
           <option value="" disabled>
             Seleccioná un usuario
           </option>
-          {users.map((user, idx) => (
+          {users.map((user) => (
             <option key={user.id} value={user.id}>
               {user.name}
             </option>
@@ -213,8 +205,8 @@ export default function PostAura({}) {
         </select>
       </div>
 
-
-      <div className="mb-6">
+      {/* Descripción */}
+      <div className="mb-6 max-w-xl mx-auto w-full">
         <label className="block mb-2 font-medium text-black dark:text-white">
           Descripción
         </label>
@@ -227,13 +219,12 @@ export default function PostAura({}) {
         />
       </div>
 
-
-      {/* Switch con Tailwind */}
+      {/* Switch */}
       <div className="flex justify-center items-center gap-3 mb-6">
         <div
           onClick={() => setIsPrivate(!isPrivate)}
           className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
-            isPrivate ? color[0] : "bg-gray-400"
+            isPrivate ? "bg-indigo-600" : "bg-gray-300 border border-gray-400"
           }`}
         >
           <div
@@ -245,50 +236,26 @@ export default function PostAura({}) {
         <span className="text-black dark:text-white">Inmediato</span>
       </div>
 
-      <div className="flex justify-center items-center">
+      {/* Botón de postear + loading */}
+      <div className="flex justify-center items-center relative mt-4">
         <button
-  onClick={handlePost}
-  disabled={!canPost || isPosting}
-  className={`px-6 py-3 rounded font-bold flex items-center justify-center gap-2 ${
-    canPost && !isPosting
-      ? `${color[0]} text-white`
-      : "bg-gray-400 text-white cursor-not-allowed"
-  }`}
->
-  {isPosting ? (
-    <svg
-      className="animate-spin h-5 w-5 text-white"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8v8H4z"
-      />
-    </svg>
-  ) : (
-    "Postear"
-  )}
-</button>
+          onClick={handlePost}
+          disabled={!canPost || isPosting}
+          className={`cursor-pointer px-6 py-3 rounded font-bold ${
+            canPost && !isPosting
+              ? "bg-indigo-600 text-white hover:bg-indigo-700"
+              : "bg-gray-400 text-white cursor-not-allowed"
+          }`}
+        >
+          Postear
+        </button>
 
+        {isPosting && (
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <div className="w-6 h-6 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
       </div>
     </div>
-    
   );
-  function getAuraColor(aura) {
-  if (aura < 500) return ['bg-red-500', 'dark:bg-red-500', 'hover:bg-red-600', 'dark:hover:bg-red-600', 'text-red-500', 'dark:text-red-500', 'border-red-500', 'dark:border-red-500'];
-  if (aura < 1500) return ['bg-indigo-600', 'dark:bg-indigo-600', 'hover:bg-indigo-700', 'dark:hover:bg-indigo-700', 'text-indigo-600', 'dark:text-indigo-600', 'border-indigo-600', 'dark:border-indigo-600'];
-  if (aura < 2000) return ['bg-cyan-400', 'dark:bg-cyan-400', 'hover:bg-cyan-500', 'dark:hover:bg-cyan-500', 'text-cyan-400', 'dark:text-cyan-400', 'border-cyan-400', 'dark:border-cyan-400'];
-  return ['bg-yellow-400', 'dark:bg-yellow-400', 'hover:bg-yellow-500', 'dark:hover:bg-yellow-500', 'text-yellow-400', 'dark:text-yellow-400', 'border-yellow-400', 'dark:border-yellow-400']; // dorado
-  }
 }

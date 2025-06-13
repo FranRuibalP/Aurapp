@@ -1,8 +1,15 @@
 const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const cloudinary = require("cloudinary").v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}, "_id username aura").sort({ createdAt: -1 });
+    const users = await User.find({}, "_id username aura profileImage").sort({ createdAt: -1 });
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: "Error al obtener usuarios" });
@@ -27,20 +34,6 @@ exports.createUser = async (req, res) => {
     res.status(201).json(newUser);
   } catch (err) {
     res.status(400).json({ message: "Error al crear usuario" });
-  }
-};
-
-exports.updateUserAura = async (req, res) => {
-  try {
-    const { aura } = req.body;
-    const updated = await User.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { aura: aura } },
-      { new: true }
-    );
-    res.json(updated);
-  } catch (err) {
-    res.status(400).json({ message: "Error al actualizar aura" });
   }
 };
 exports.updateUserAura = async (req, res) => {
@@ -70,5 +63,36 @@ exports.getUserByName = async (req, res) => {
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener el usuario", error });
+  }
+};
+exports.updateUserData = async (req, res) => {
+  try {
+    const { username, email, password, newImage, oldImagePublicId } = req.body;
+    const { id } = req.params;
+
+    const updateData = {};
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (password) {
+      const hashed = await bcrypt.hash(password, 10);
+      updateData.password = hashed;
+    }
+    if (newImage) {
+      updateData.profileImage = newImage.profileImage;
+      updateData.imagePublicId = newImage.imagePublicId;
+
+      if (oldImagePublicId) {
+        await cloudinary.uploader.destroy(oldImagePublicId);
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    console.error("Error al actualizar usuario:", error);
+    res.status(500).json({ message: "No se pudo actualizar el usuario" });
   }
 };

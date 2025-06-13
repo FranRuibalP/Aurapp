@@ -36,7 +36,7 @@ export default function MotivationalPhrase() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.5 }}
-          className="absolute w-full text-center text-black dark:text-gray-200 italic text-sm sm:text-base px-2"
+          className="absolute w-full text-center text-zinc-50 italic text-sm sm:text-base px-2"
         >
           "{frases[indice].texto}"
           <br />

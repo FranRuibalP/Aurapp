@@ -1,5 +1,11 @@
 const Post = require("../models/Post");
 const User = require("../models/User");
+const cloudinary = require("cloudinary").v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Obtener todos los posts con datos del autor y del destinatario
 exports.getAllPosts = async (req, res) => {
@@ -17,7 +23,7 @@ exports.getAllPosts = async (req, res) => {
 // Crear un nuevo post con referencias válidas
 exports.createPost = async (req, res) => {
   try {
-    const { author, dedicatedTo, description, aura ,image, imagePublicId} = req.body;
+    const { author, dedicatedTo, description, aura ,image, imagePublicId,auraImpactApplied} = req.body;
 
     // Validar que los usuarios existan
     const authorExists = await User.findById(author);
@@ -33,6 +39,7 @@ exports.createPost = async (req, res) => {
       aura,
       image,
       imagePublicId,
+      auraImpactApplied,
     });
 
     await newPost.save();
@@ -124,5 +131,44 @@ exports.votePost = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error al votar el post." });
+  }
+};
+exports.getPostsById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(req.params);
+    const posts = await Post.find({
+      $or: [{ author: id }, { dedicatedTo: id }],
+    })
+      .populate("author", "username profileImage")
+      .populate("dedicatedTo", "username profileImage")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(posts);
+  } catch (error) {
+    console.error("Error al obtener posts del usuario:", error);
+    res.status(500).json({ message: "Error al obtener los posts" });
+  }
+};
+exports.deletePost = async (req, res) => {
+    try {
+    const { id } = req.params;
+
+    const post = await Post.findById(id);
+    if (!post) {
+      return res.status(404).json({ message: "Post no encontrado" });
+    }
+    console.log(post.imagePublicId)
+    // Si el post tiene imagen alojada en Cloudinary, eliminarla
+    if (post.imagePublicId) {
+      await cloudinary.uploader.destroy(post.imagePublicId);
+    }
+
+    await Post.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Post eliminado correctamente" });
+  } catch (error) {
+    console.error("Error al eliminar el post:", error);
+    res.status(500).json({ message: "No se pudo eliminar el post" });
   }
 };

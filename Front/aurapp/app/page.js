@@ -75,7 +75,7 @@ export default function LandingPage() {
             setError("");
             setRegisterSuccess(false);
           }}
-          className="z-10 bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-200 transition"
+          className="cursor-pointer z-10 bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-200 transition"
         >
           Get Started
         </button>
@@ -97,7 +97,7 @@ export default function LandingPage() {
                 {/* Botón de cierre */}
                 <button
                   onClick={() => setModalOpen(false)}
-                  className="absolute top-2 right-4 text-black text-xl font-bold"
+                  className="cursor-pointer absolute top-2 right-4 text-black text-xl font-bold"
                 >
                   ×
                 </button>
@@ -121,7 +121,7 @@ export default function LandingPage() {
                   />
                   {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
                   <button
-                    className="bg-black text-white px-4 py-2 rounded w-full"
+                    className=" cursor-pointer bg-black hover:bg-gray-800 text-white px-4 py-2 rounded w-full"
                     onClick={handleLogin}
                   >
                     Entrar
@@ -157,7 +157,7 @@ export default function LandingPage() {
                     }
                   />
                   <button
-                    className="bg-black text-white px-4 py-2 rounded w-full"
+                    className="cursor-pointer bg-black hover:bg-gray-800 text-white px-4 py-2 rounded w-full"
                     onClick={handleRegister}
                   >
                     Registrarse

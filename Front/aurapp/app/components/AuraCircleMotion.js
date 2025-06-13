@@ -49,13 +49,13 @@ export default function AuraCircle({ aura }) {
     function getBorderAuraColor(aura) {
     if (aura < 500) return 'border-red-500';
     if (aura < 1500) return 'border-indigo-600';
-    if (aura < 2000) return 'border-cyan-400';
+    if (aura < 2000) return 'border-emerald-400';
     return 'border-yellow-400'; // dorado
     }
     function getBgAuraColor(aura) {
     if (aura < 500) return 'bg-red-500';
     if (aura < 1500) return 'bg-indigo-600';
-    if (aura < 2000) return 'bg-cyan-400';
+    if (aura < 2000) return 'bg-emerald-400';
     return 'bg-yellow-400'; // dorado
     }
 }

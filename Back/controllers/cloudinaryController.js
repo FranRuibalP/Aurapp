@@ -10,6 +10,7 @@ cloudinary.config({
 });
 
 exports.deleteImage = async (req, res) => {
+  console.log(req.body);
   const { public_id } = req.body;
 
   try {

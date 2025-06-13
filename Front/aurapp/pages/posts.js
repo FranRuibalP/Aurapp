@@ -69,7 +69,7 @@ export default function PostsPage(aura) {
   };
 
   return (
-    <div className="relative min-h-screen flex justify-center mt-10 mb-30 bg-transparent text-black dark:text-white">
+    <div className="relative min-h-screen flex justify-center mt-10 mb-30 bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white">
       <Navbar />
 
       <main className="w-full max-w-2xl mt-6 space-y-6 mr-4 ml-4">
@@ -77,7 +77,7 @@ export default function PostsPage(aura) {
           <h1 className="text-3xl font-bold">Posts</h1>
           <button
             onClick={toggleFilter}
-            className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg shadow transition"
+            className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow transition"
           >
             {showOnlyOpen ? "Mostrar todos" : "Mostrar solo abiertos"}
           </button>
@@ -94,7 +94,7 @@ export default function PostsPage(aura) {
 
       <Link
         href={{ pathname: "/post-aura", query: { aura } }}
-        className="fixed bottom-6 right-6 bg-violet-600 hover:bg-violet-700 text-white p-4 rounded-full shadow-lg transition-all duration-300"
+        className="fixed bottom-6 right-6 bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-lg transition-all duration-300"
         aria-label="Crear nuevo post"
       >
         <FiPlus className="text-2xl" />
